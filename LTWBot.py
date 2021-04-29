@@ -20,6 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 TOKEN = os.getenv("LTWBOT_TOKEN")
@@ -45,19 +46,44 @@ tower_data_version = "5.3b"
 tower_data = tower_sheet.get_all_records()
 
 
-@bot.command(name="leaderboard", help="Prints the current leaderboard from the bot's local files")
+@bot.event
+async def on_message(ctx):
+    if ctx.author.name == bot.user:
+        return
+
+    if len(ctx.attachments) > 0:
+        if ctx.attachments[0].filename == "leaderboard_dump.txt":
+            file_name = str(datetime.now().strftime("%Y-%m-%d %H.%M.%S")) + " LTW Leaderboard pre-parse.txt"
+            open(file_name, "wb").write(requests.get(ctx.attachments[0].url).content)
+            lb = open(parse_leaderboard(file_name))
+            response = lb.readlines()
+            response1 = ""
+            response2 = "`"
+            for line in response[:51]:
+                response1 += line
+
+            response1 += "`"
+
+            for line in response[51:]:
+                response2 += line
+
+            await ctx.channel.send(response1)
+            await ctx.channel.send(response2)
+
+    await bot.process_commands(ctx)
+
+
+@bot.command(name="leaderboard", help="Prints the latest leaderboard uploaded to the bot")
 async def leaderboard(ctx):
-    file = open(parse_leaderboard(
-        os.environ['USERPROFILE'] + "\\Documents\\Warcraft III\\CustomMapData\\LTWR\\Data50\\leaderboard_dump.txt"))
-    response = file.readlines()
+    lb = open("LTW Leaderboard.txt").readlines()
     response1 = ""
     response2 = "`"
-    for line in response[:51]:
+    for line in lb[:51]:
         response1 += line
 
     response1 += "`"
 
-    for line in response[51:]:
+    for line in lb[51:]:
         response2 += line
 
     await ctx.send(response1)
@@ -96,7 +122,6 @@ async def get_creep(ctx, creep_name):
         response = "Too many creeps found, try a more specific term."
 
     await ctx.send(response)
-
 
 
 @bot.event
@@ -161,9 +186,8 @@ def get_creep_data(creep_name):
 
 def parse_leaderboard(file_name):
     file = open(file_name)
-    print(datetime.now())
-    new_file_name = str(datetime.now().strftime("%Y-%m-%d %H.%M.%S")) + " LTW Leaderboard.txt"
-    new_file = open(new_file_name, "x")
+    new_file_name = "LTW Leaderboard.txt"
+    new_file = open(new_file_name, "w+")
     leaderboard = file.readlines()
     new_file.write("`")
     for line in leaderboard:

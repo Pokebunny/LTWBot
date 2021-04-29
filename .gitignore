@@ -112,3 +112,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+client_secret.json
+tower_data.txt
+LTW Leaderboard.txt
+*.txt
