@@ -55,7 +55,7 @@ async def on_message(ctx):
         if ctx.attachments[0].filename == "leaderboard_dump.txt":
             file_name = str(datetime.now().strftime("%Y-%m-%d %H.%M.%S")) + " LTW Leaderboard pre-parse.txt"
             open(file_name, "wb").write(requests.get(ctx.attachments[0].url).content)
-            lb = open(parse_leaderboard(file_name))
+            lb = open(parse_leaderboard(file_name), encoding="latin-1")
             response = lb.readlines()
             response1 = ""
             response2 = "`"
@@ -75,7 +75,7 @@ async def on_message(ctx):
 
 @bot.command(name="leaderboard", help="Prints the latest leaderboard uploaded to the bot")
 async def leaderboard(ctx):
-    lb = open("LTW Leaderboard.txt").readlines()
+    lb = open("LTW Leaderboard.txt", encoding="latin-1").readlines()
     response1 = ""
     response2 = "`"
     for line in lb[:51]:
@@ -185,9 +185,9 @@ def get_creep_data(creep_name):
 
 
 def parse_leaderboard(file_name):
-    file = open(file_name)
+    file = open(file_name, encoding="latin-1")
     new_file_name = "LTW Leaderboard.txt"
-    new_file = open(new_file_name, "w+")
+    new_file = open(new_file_name, "w+", encoding="latin-1")
     leaderboard = file.readlines()
     new_file.write("`")
     for line in leaderboard:
