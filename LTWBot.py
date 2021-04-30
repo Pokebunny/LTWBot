@@ -53,11 +53,9 @@ for i in reversed(range(len(tower_data))):
     if tower_data[i]["TOWER"] == "":
         del tower_data[i]
 
-# global trivia_active
 trivia_active = False
-# global current_answer
 current_answer = ""
-
+session_trivia_stats = {}
 
 @bot.event
 async def on_ready():
@@ -89,9 +87,16 @@ async def on_message(ctx):
             await ctx.channel.send(response2)
 
     if trivia_active:
+        global current_answer
         if str(ctx.content).lower() == str(current_answer).lower() and ctx.channel.name == "ltw-bot-channel":
-            await ctx.channel.send(ctx.author.name + " was correct!")
-            sleep(2)
+            await ctx.channel.send(ctx.author.name + " was correct! The answer was " + str(current_answer))
+            if ctx.author.name in list(session_trivia_stats.keys()):
+                session_trivia_stats[ctx.author.name] += 1
+            else:
+                session_trivia_stats[ctx.author.name] = 1
+
+            current_answer = ""
+            sleep(5)
             await ask_trivia_question(ctx)
 
     await bot.process_commands(ctx)
@@ -240,6 +245,31 @@ async def trivia(ctx, param):
     if param == "stop":
         global current_answer
         current_answer = ""
+        await ctx.channel.send("Trivia stopped, saving statistics...")
+        global session_trivia_stats
+        await ctx.channel.send("Session statistics:")
+        await ctx.channel.send(session_trivia_stats)
+        file = open("trivia_stats.txt", "r", encoding="latin-1")
+        stats = file.readlines()
+        total_trivia_stats = {}
+        for line in stats:
+            user = line.split()[0]
+            correct_answer_count = int(line.split()[1])
+            print(correct_answer_count)
+            total_trivia_stats[user] = correct_answer_count
+            if user in session_trivia_stats:
+                total_trivia_stats[user] += session_trivia_stats[user]
+                del session_trivia_stats[user]
+        for user, score in session_trivia_stats.items():
+            total_trivia_stats[user] = score
+        file = open("trivia_stats.txt", "w", encoding="latin-1")
+        file.truncate(0)
+        for user, score in total_trivia_stats.items():
+            file.write(user + " " + str(score) + "\n")
+        await ctx.channel.send("All time statistics:")
+        await ctx.channel.send(total_trivia_stats)
+
+        session_trivia_stats = {}
         trivia_active = False
 
 
@@ -251,7 +281,7 @@ async def ask_trivia_question(ctx):
 
 
 def create_trivia_question():
-    topic = random.choice(["tower", "creep"])
+    topic = random.choice(["tower", "creep", "tower"])
     question = ""
     answer = ""
     if topic == "tower":
@@ -276,6 +306,8 @@ def create_trivia_question():
     elif topic == "creep":
         creep = random.choice(creep_data)
         attribute_list = list(creep.keys())
+        attribute_list.remove("INC. RATIO")
+        attribute_list.remove("HP")
         attribute_list.remove("BOU. RATIO")
         attribute_list.remove("EHP")
         attribute_list.remove("HP RATIO")
