@@ -57,6 +57,9 @@ trivia_active = False
 current_answer = ""
 session_trivia_stats = {}
 
+trivia_margin_of_error = 0.01
+
+
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
@@ -85,19 +88,16 @@ async def on_message(ctx):
 
             await ctx.channel.send(response1)
             await ctx.channel.send(response2)
+            await ctx.delete()
 
     if trivia_active:
         global current_answer
-        if str(ctx.content).lower() == str(current_answer).lower() and ctx.channel.name == "ltw-bot-channel":
-            await ctx.channel.send(ctx.author.name + " was correct! The answer was " + str(current_answer))
-            if ctx.author.name in list(session_trivia_stats.keys()):
-                session_trivia_stats[ctx.author.name] += 1
-            else:
-                session_trivia_stats[ctx.author.name] = 1
-
-            current_answer = ""
-            sleep(5)
-            await ask_trivia_question(ctx)
+        if type(current_answer) is float or type(current_answer) is int and ctx.channel.name == "ltw-bot-channel":
+            if current_answer - (current_answer * trivia_margin_of_error) <= float(ctx.content) \
+                    <= current_answer + (current_answer * trivia_margin_of_error):
+                await correct_answer(ctx)
+        elif str(ctx.content).lower() == str(current_answer).lower() and ctx.channel.name == "ltw-bot-channel":
+            await correct_answer(ctx)
 
     await bot.process_commands(ctx)
 
@@ -327,6 +327,20 @@ def create_trivia_question():
             answer = creep[attribute]
 
     return question, answer
+
+
+async def correct_answer(ctx):
+    global current_answer
+    previous_answer = current_answer
+    current_answer = ""
+    await ctx.channel.send(ctx.author.name + " was correct! The answer was " + str(previous_answer))
+    if ctx.author.name in list(session_trivia_stats.keys()):
+        session_trivia_stats[ctx.author.name] += 1
+    else:
+        session_trivia_stats[ctx.author.name] = 1
+
+    sleep(5)
+    await ask_trivia_question(ctx)
 
 
 bot.run(TOKEN)
