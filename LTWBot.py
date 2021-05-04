@@ -93,9 +93,12 @@ async def on_message(ctx):
     if trivia_active:
         global current_answer
         if type(current_answer) is float or type(current_answer) is int and ctx.channel.name == "ltw-bot-channel":
-            if current_answer - (current_answer * trivia_margin_of_error) <= float(ctx.content) \
+            try:
+                if current_answer - (current_answer * trivia_margin_of_error) <= float(ctx.content) \
                     <= current_answer + (current_answer * trivia_margin_of_error):
-                await correct_answer(ctx)
+                    await correct_answer(ctx)
+            except ValueError:
+                pass
         elif str(ctx.content).lower() == str(current_answer).lower() and ctx.channel.name == "ltw-bot-channel":
             await correct_answer(ctx)
 
