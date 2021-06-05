@@ -1,12 +1,13 @@
 # file: LTWBot.py
 # author: Nick Taber (Pokebunny)
-# date: 4/8/21
+# date: 5/6/21
 
-# A Discord bot for use im the Line Tower Wars official Discord server.
+# A Discord bot for use in the Line Tower Wars official Discord server.
 
 # CURRENT FEATURES
-#   Leaderboard printing from local file
-#   Tower data printing
+#   Leaderboard printing from file upload
+#   Tower and creep data printing from google spreadsheet
+#   Tower and creep trivia
 
 # PLANNED FEATURES
 #   Complete tower data entry
@@ -40,14 +41,14 @@ creep_sheet = client.open("LTW 5.1 - Theorycrafting").worksheet("Creep Data")
 tower_sheet = client.open("LTW 5.1 - Theorycrafting").worksheet("Tower Data")
 
 # Extract and store creep data
-creep_data_version = "5.4a"
+creep_data_version = "5.6b"
 creep_data = creep_sheet.get_all_records()
 for i in reversed(range(len(creep_data))):
     if creep_data[i]["CREEP"] == "":
         del creep_data[i]
 
 # Extract and store tower data
-tower_data_version = "5.4a"
+tower_data_version = "5.6b"
 tower_data = tower_sheet.get_all_records()
 for i in reversed(range(len(tower_data))):
     if tower_data[i]["TOWER"] == "":
@@ -94,8 +95,8 @@ async def on_message(ctx):
         global current_answer
         if type(current_answer) is float or type(current_answer) is int and ctx.channel.name == "ltw-bot-channel":
             try:
-                if current_answer - (current_answer * trivia_margin_of_error) <= float(ctx.content) \
-                    <= current_answer + (current_answer * trivia_margin_of_error):
+                if current_answer - (current_answer * trivia_margin_of_error) <= float(ctx.content) <= \
+                        current_answer + (current_answer * trivia_margin_of_error):
                     await correct_answer(ctx)
             except ValueError:
                 pass
@@ -258,7 +259,6 @@ async def trivia(ctx, param):
         for line in stats:
             user = line.split()[0]
             correct_answer_count = int(line.split()[1])
-            print(correct_answer_count)
             total_trivia_stats[user] = correct_answer_count
             if user in session_trivia_stats:
                 total_trivia_stats[user] += session_trivia_stats[user]
