@@ -10,10 +10,7 @@
 #   Tower and creep trivia
 
 # PLANNED FEATURES
-#   Complete tower data entry
-#   Creep data printing
-#   Migrate data source to Google Sheets and integrate
-#   Allow users to provide updated leaderboard data
+
 import random
 from datetime import datetime
 from time import sleep
@@ -37,22 +34,30 @@ creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', s
 client = gspread.authorize(creds)
 
 # Open LTW spreadsheet
-creep_sheet = client.open("LTW 5.1 - Theorycrafting").worksheet("Creep Data")
-tower_sheet = client.open("LTW 5.1 - Theorycrafting").worksheet("Tower Data")
+creep_sheet = client.open("LTW 5.x - Theorycrafting").worksheet("Creep Data")
+tower_sheet = client.open("LTW 5.x - Theorycrafting").worksheet("Tower Data")
+disc_sheet = client.open("LTW 5.x - Theorycrafting").worksheet("Disc Data")
 
 # Extract and store creep data
-creep_data_version = "5.6b"
+creep_data_version = "5.8a"
 creep_data = creep_sheet.get_all_records()
 for i in reversed(range(len(creep_data))):
     if creep_data[i]["CREEP"] == "":
         del creep_data[i]
 
 # Extract and store tower data
-tower_data_version = "5.6b"
+tower_data_version = "5.8a"
 tower_data = tower_sheet.get_all_records()
 for i in reversed(range(len(tower_data))):
     if tower_data[i]["TOWER"] == "":
         del tower_data[i]
+
+# Extract and store disc data
+disc_data_version = "5.8a"
+disc_data = disc_sheet.get_all_records()
+for i in reversed(range(len(disc_data))):
+    if disc_data[i]["DISC"] == "":
+        del disc_data[i]
 
 trivia_active = False
 current_answer = ""
@@ -71,7 +76,7 @@ async def on_message(ctx):
     if ctx.author.name == bot.user:
         return
 
-    if len(ctx.attachments) > 0:
+    if len(ctx.attachments) > 0 and ctx.channel.name == "current-season":
         if ctx.attachments[0].filename == "leaderboard_dump.txt":
             file_name = str(datetime.now().strftime("%Y-%m-%d %H.%M.%S")) + " LTW Leaderboard pre-parse.txt"
             open(file_name, "wb").write(requests.get(ctx.attachments[0].url).content)
@@ -87,6 +92,10 @@ async def on_message(ctx):
             for line in response[51:]:
                 response2 += line
 
+            messages = await ctx.channel.history(limit=3).flatten()
+            await messages[1].delete()
+            await messages[2].delete()
+            print(ctx.author.name)
             await ctx.channel.send(response1)
             await ctx.channel.send(response2)
             await ctx.delete()
@@ -106,21 +115,21 @@ async def on_message(ctx):
     await bot.process_commands(ctx)
 
 
-@bot.command(name="leaderboard", help="Prints the latest leaderboard uploaded to the bot")
-async def leaderboard(ctx):
-    lb = open("LTW Leaderboard.txt", encoding="latin-1").readlines()
-    response1 = ""
-    response2 = "`"
-    for line in lb[:51]:
-        response1 += line
-
-    response1 += "`"
-
-    for line in lb[51:]:
-        response2 += line
-
-    await ctx.send(response1)
-    await ctx.send(response2)
+# @bot.command(name="leaderboard", help="Prints the latest leaderboard uploaded to the bot")
+# async def leaderboard(ctx):
+#     lb = open("LTW Leaderboard.txt", encoding="latin-1").readlines()
+#     response1 = ""
+#     response2 = "`"
+#     for line in lb[:51]:
+#         response1 += line
+#
+#     response1 += "`"
+#
+#     for line in lb[51:]:
+#         response2 += line
+#
+#     await ctx.send(response1)
+#     await ctx.send(response2)
 
 
 def parse_leaderboard(file_name):
@@ -167,7 +176,7 @@ async def get_tower(ctx, tower_name):
 
 
 @bot.command(name="creep", help="Type !creep <creepname> with no spaces in the tower name to fetch information about "
-                                "a tower. Also can match partial creep names.")
+                                "a creep. Also can match partial creep names.")
 async def get_creep(ctx, creep_name):
     response = ""
     if creep_name == "list":
@@ -180,6 +189,24 @@ async def get_creep(ctx, creep_name):
         response = "Creep not found. You may need to type the creep name with no spaces, or in quotes."
     if len(response) > 2000:
         response = "Too many creeps found, try a more specific term."
+
+    await ctx.send(response)
+
+
+@bot.command(name="disc", help="Type !disc <element> with no spaces in the tower name to fetch information about "
+                                "a disc.")
+async def get_disc(ctx, disc_name):
+    response = ""
+    if disc_name == "list":
+        for d in disc_data:
+            response += d["DISC"] + ", "
+    else:
+        response = get_disc_data(disc_name)
+
+    if response == "":
+        response = "Disc not found. You may need to type the disc name with no spaces, or in quotes."
+    if len(response) > 2000:
+        response = "Too many discs found, try a more specific term."
 
     await ctx.send(response)
 
@@ -239,6 +266,15 @@ def get_creep_data(creep_name):
     return creep_string
 
 
+def get_disc_data(disc_name):
+    disc_string = ""
+    for disc in disc_data:
+        if disc_name.lower().replace(" ", "") in disc["DISC"].lower().replace(" ", ""):\
+            disc_string += "**" + disc["DISC"] + "** *(Version " + disc_data_version + ")*\n" + disc["EFFECT"] + "\n\n"
+
+    return disc_string
+
+
 @bot.command(name="trivia", help="Starts the bot running Line Tower Wars trivia.")
 async def trivia(ctx, param):
     global trivia_active
@@ -290,6 +326,7 @@ def create_trivia_question():
     if topic == "tower":
         tower = random.choice(tower_data)
         attribute_list = list(tower.keys())
+        print(attribute_list)
         attribute_list.remove("DPS (Single Target)")
         attribute_list.remove("DPS/Gold Cost Ratio")
         attribute_list.remove("Minimum Damage")
