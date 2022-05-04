@@ -116,3 +116,5 @@ client_secret.json
 tower_data.txt
 LTW Leaderboard.txt
 *.txt
+.idea/LTWBot.iml
+.idea/misc.xml
